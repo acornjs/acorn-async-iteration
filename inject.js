@@ -145,7 +145,6 @@ module.exports = function (acorn) {
       }
     })
 
-
     // Disallow super() in async generator functions
     instance.extend("parseExprAtom", function (superF) {
       return function(refDestructuringErrors) {

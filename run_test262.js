@@ -19,4 +19,3 @@ run(
     whitelist: fs.readFileSync("./test262.whitelist", "utf8").split("\n").filter(v => v && v[0] !== "#")
   }
 )
-
