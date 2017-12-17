@@ -10,8 +10,6 @@ language/statements/class/async-gen-meth-escaped-async.js (default)
 language/statements/class/async-gen-meth-escaped-async.js (strict mode)
 language/statements/for-await-of/escaped-of.js (default)
 language/statements/for-await-of/escaped-of.js (strict mode)
-language/expressions/object/method-definition/async-gen-meth-escaped-async.js (default)
-language/expressions/object/method-definition/async-gen-meth-escaped-async.js (strict mode)
 
 # Async functions are not allowed in statement position
 # Fixed in https://github.com/ternjs/acorn/commit/b659385783e3f75853bb1865af90c902737889c2

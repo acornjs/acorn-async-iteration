@@ -324,6 +324,8 @@ describe("acorn-async-iteration", function () {
     })
   })
 
+  test("({ async *method(){} })")
+  testFail("({ \\u0061sync *method(){} })")
   // Not yet fixed in acorn master
   //testFail("void \\u0061sync function* f(){};");
 

@@ -2,7 +2,6 @@
 
 module.exports = function (acorn) {
   const tt = acorn.tokTypes
-  const lineBreak = acorn.lineBreak
 
   acorn.plugins.asyncIteration = function (instance) {
 
@@ -56,38 +55,22 @@ module.exports = function (acorn) {
     })
 
     // Parse async generator functions as object literal method
-    instance.extend("isAsyncProp", function (superF) {
-      return function(prop) {
-        return superF.call(this, prop) || (this.type == tt.star &&
-          !prop.computed && prop.key.type === "Identifier" && prop.key.name === "async" &&
-          !lineBreak.test(this.input.slice(this.lastTokEnd, this.start)))
-      }
-    })
-
-    instance.extend("parseProperty", function (_superF) {
+    instance.extend("parseProperty", function (superF) {
       return function(isPattern, refDestructuringErrors) {
-        // c&p
-        let prop = this.startNode(), isGenerator, isAsync, startPos, startLoc
-        if (this.options.ecmaVersion >= 6) {
-          prop.method = false
-          prop.shorthand = false
-          if (isPattern || refDestructuringErrors) {
-            startPos = this.start
-            startLoc = this.startLoc
-          }
-          if (!isPattern)
-            isGenerator = this.eat(tt.star)
+        if (isPattern || !(this.options.ecmaVersion >= 8 && this.type === tt.name && this.value === "async" && !this.containsEsc))
+          return superF.call(this, isPattern, refDestructuringErrors)
+
+        let prop = this.startNode(), startPos, startLoc
+        prop.method = false
+        prop.shorthand = false
+        if (refDestructuringErrors) {
+          startPos = this.start
+          startLoc = this.startLoc
         }
-        this.parsePropertyName(prop)
-        if (!isPattern && this.options.ecmaVersion >= 8 && !isGenerator && this.isAsyncProp(prop)) {
-          isAsync = true
-          // Inserted this
-          isGenerator = this.eat(tt.star)
-          this.parsePropertyName(prop, refDestructuringErrors)
-        } else {
-          isAsync = false
-        }
-        this.parsePropertyValue(prop, isPattern, isGenerator, isAsync, startPos, startLoc, refDestructuringErrors)
+        this.expectContextual("async")
+        let isGenerator = this.eat(tt.star)
+        this.parsePropertyName(prop, refDestructuringErrors)
+        this.parsePropertyValue(prop, false, isGenerator, true, startPos, startLoc, refDestructuringErrors)
         return this.finishNode(prop, "Property")
       }
     })
