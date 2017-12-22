@@ -57,8 +57,9 @@ module.exports = function (acorn) {
     // Parse async generator functions as object literal method
     instance.extend("parseProperty", function (superF) {
       return function(isPattern, refDestructuringErrors) {
-        if (isPattern || !(this.options.ecmaVersion >= 8 && this.type === tt.name && this.value === "async" && !this.containsEsc))
+        if (isPattern || !(this.options.ecmaVersion >= 8 && this.type === tt.name && this.value === "async" && !this.containsEsc)) {
           return superF.call(this, isPattern, refDestructuringErrors)
+        }
 
         let prop = this.startNode(), startPos, startLoc
         prop.method = false
@@ -76,72 +77,61 @@ module.exports = function (acorn) {
     })
 
     // Parse async generator functions as class method
-    instance.extend("parseClass", function (_superF) {
-      return function(node, isStatement) {
-        this.next()
+    instance.extend("parseClassMember", function (superF) {
+      return function(classBody) {
+        if (!(this.options.ecmaVersion >= 8 && this.type === tt.name && (this.value === "async" || this.value === "static") && !this.containsEsc)) {
+          return superF.call(this, classBody)
+        }
 
-        this.parseClassId(node, isStatement)
-        this.parseClassSuper(node)
-        let classBody = this.startNode()
-        let hadConstructor = false
-        classBody.body = []
-        this.expect(tt.braceL)
-        while (!this.eat(tt.braceR)) {
-          if (this.eat(tt.semi)) continue
-          let method = this.startNode()
-          let isGenerator = this.eat(tt.star)
-          let isAsync = false
-          let isMaybeStatic = this.type === tt.name && this.value === "static"
-          this.parsePropertyName(method)
-          method.static = isMaybeStatic && this.type !== tt.parenL
-          if (method.static) {
-            if (isGenerator) this.unexpected()
-            isGenerator = this.eat(tt.star)
-            this.parsePropertyName(method)
-          }
-          if (this.options.ecmaVersion >= 8 && !isGenerator && !method.computed &&
-              method.key.type === "Identifier" && method.key.name === "async" && this.type !== tt.parenL &&
-              !this.canInsertSemicolon()) {
+        let method = this.startNode()
+        const tryContextual = (k, noLineBreak) => {
+          const start = this.start, startLoc = this.startLoc
+          if (!this.eatContextual(k)) return false
+          if (this.type !== tt.parenL && (!noLineBreak || !this.canInsertSemicolon())) return true
+          if (method.key) this.unexpected()
+          method.computed = false
+          method.key = this.startNodeAt(start, startLoc)
+          method.key.name = k
+          this.finishNode(method.key, "Identifier")
+          return false
+        }
+
+        method.kind = "method"
+        method.static = tryContextual("static")
+        let isGenerator = this.eat(tt.star)
+        let isAsync = false
+        if (!isGenerator) {
+          if (this.options.ecmaVersion >= 8 && tryContextual("async", true)) {
             isAsync = true
             isGenerator = this.eat(tt.star)
-            this.parsePropertyName(method)
-          }
-          method.kind = "method"
-          let isGetSet = false
-          if (!method.computed) {
-            let key = method.key
-            if (!isGenerator && !isAsync && key.type === "Identifier" && this.type !== tt.parenL && (key.name === "get" || key.name === "set")) {
-              isGetSet = true
-              method.kind = key.name
-              key = this.parsePropertyName(method)
-            }
-            if (!method.static && (key.type === "Identifier" && key.name === "constructor" ||
-                key.type === "Literal" && key.value === "constructor")) {
-              if (hadConstructor) this.raise(key.start, "Duplicate constructor in the same class")
-              if (isGetSet) this.raise(key.start, "Constructor can't have get/set modifier")
-              if (isGenerator) this.raise(key.start, "Constructor can't be a generator")
-              if (isAsync) this.raise(key.start, "Constructor can't be an async method")
-              method.kind = "constructor"
-              hadConstructor = true
-            }
-          }
-          this.parseClassMethod(classBody, method, isGenerator, isAsync)
-          if (isGetSet) {
-            let paramCount = method.kind === "get" ? 0 : 1
-            if (method.value.params.length !== paramCount) {
-              let start = method.value.start
-              if (method.kind === "get")
-                this.raiseRecoverable(start, "getter should have no params")
-              else
-                this.raiseRecoverable(start, "setter should have exactly one param")
-            } else {
-              if (method.kind === "set" && method.value.params[0].type === "RestElement")
-                this.raiseRecoverable(method.value.params[0].start, "Setter cannot use rest params")
-            }
+          } else if (tryContextual("get")) {
+            method.kind = "get"
+          } else if (tryContextual("set")) {
+            method.kind = "set"
           }
         }
-        node.body = this.finishNode(classBody, "ClassBody")
-        return this.finishNode(node, isStatement ? "ClassDeclaration" : "ClassExpression")
+        if (!method.key) this.parsePropertyName(method)
+        let key = method.key
+        if (!method.computed && !method.static && (key.type === "Identifier" && key.name === "constructor" ||
+            key.type === "Literal" && key.value === "constructor")) {
+          if (method.kind !== "method") this.raise(key.start, "Constructor can't have get/set modifier")
+          if (isGenerator) this.raise(key.start, "Constructor can't be a generator")
+          if (isAsync) this.raise(key.start, "Constructor can't be an async method")
+          method.kind = "constructor"
+        } else if (method.static && key.type === "Identifier" && key.name === "prototype") {
+          this.raise(key.start, "Classes may not have a static property named prototype")
+        }
+        this.parseClassMethod(classBody, method, isGenerator, isAsync)
+        if (method.kind === "get" && method.value.params.length !== 0) {
+          this.raiseRecoverable(method.value.start, "getter should have no params")
+        }
+        if (method.kind === "set" && method.value.params.length !== 1) {
+          this.raiseRecoverable(method.value.start, "setter should have exactly one param")
+        }
+        if (method.kind === "set" && method.value.params[0].type === "RestElement") {
+          this.raiseRecoverable(method.value.params[0].start, "Setter cannot use rest params")
+        }
+        return method
       }
     })
 

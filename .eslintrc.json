@@ -55,7 +55,7 @@
         ],
         "consistent-return": "error",
         "consistent-this": "error",
-        "curly": "off",
+        "curly": [ "error", "multi-line" ],
         "default-case": "error",
         "dot-location": "error",
         "dot-notation": [
