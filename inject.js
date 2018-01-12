@@ -1,6 +1,11 @@
 "use strict"
 
 module.exports = function (acorn) {
+  const acornVersion = acorn.version.match(/^5\.(\d+)\./)
+  if (!acornVersion || Number(acornVersion[1]) < 3) {
+    throw new Error("Unsupported acorn version " + acorn.version + ", please use acorn 5 >= 5.3");
+  }
+
   const tt = acorn.tokTypes
 
   acorn.plugins.asyncIteration = function (instance) {
