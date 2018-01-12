@@ -1,7 +1,7 @@
 {
   "name": "acorn-async-iteration",
   "description": "Support for async iteration in acorn",
-  "homepage": "https://github.com/adrianheine/acorn-async-iteration",
+  "homepage": "https://github.com/acornjs/acorn-async-iteration",
   "contributors": [
     "Adrian Heine <mail@adrianheine.de>"
   ],
@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/adrianheine/acorn-async-iteration"
+    "url": "https://github.com/acornjs/acorn-async-iteration"
   },
   "license": "AGPL-3.0",
   "scripts": {
