@@ -69,14 +69,22 @@ module.exports = function (acorn) {
         let prop = this.startNode(), startPos, startLoc
         prop.method = false
         prop.shorthand = false
-        if (refDestructuringErrors) {
-          startPos = this.start
-          startLoc = this.startLoc
-        }
+        startPos = this.start
+        startLoc = this.startLoc
+        let isGenerator = false
+        let isAsync = false
         this.expectContextual("async")
-        let isGenerator = this.eat(tt.star)
-        this.parsePropertyName(prop, refDestructuringErrors)
-        this.parsePropertyValue(prop, false, isGenerator, true, startPos, startLoc, refDestructuringErrors)
+        if (this.type !== tt.parenL && this.type !== tt.colon && this.type !== tt.comma && this.type !== tt.eq && !this.canInsertSemicolon()) {
+          isAsync = true
+          isGenerator = this.eat(tt.star)
+          this.parsePropertyName(prop, refDestructuringErrors)
+        } else {
+          prop.computed = false
+          prop.key = this.startNodeAt(startPos, startLoc)
+          prop.key.name = "async"
+          this.finishNode(prop.key, "Identifier")
+        }
+        this.parsePropertyValue(prop, false, isGenerator, isAsync, startPos, startLoc, refDestructuringErrors)
         return this.finishNode(prop, "Property")
       }
     })

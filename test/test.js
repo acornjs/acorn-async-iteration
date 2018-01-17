@@ -326,6 +326,12 @@ describe("acorn-async-iteration", function () {
 
   test("({ async *method(){} })")
   testFail("({ \\u0061sync *method(){} })")
-  testFail("void \\u0061sync function* f(){};");
-  testFail("for ( ; false; ) async function* g() {}");
+  testFail("void \\u0061sync function* f(){};")
+  testFail("for ( ; false; ) async function* g() {}")
+  test("({async() { }})")
+  test("({async = 0} = {})")
+  test("({async, foo})")
+  test("({async})")
+  test("({async: true})")
+  testFail("({async\n    foo() { }})", "Unexpected token (2:0)")
 })
