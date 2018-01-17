@@ -1,3 +1,7 @@
+## 0.2.1 (2018-01-17)
+
+* Don't break object members called `async`.
+
 ## 0.2.0 (2018-01-12)
 
 * Improve the way `parseProperty` is extended.
